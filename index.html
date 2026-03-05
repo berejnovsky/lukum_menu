@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Меню — Грузинский Дом Лукум</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f0eb; color: #2c2c2c; }
+
+    header {
+      background: #2c2c2c; color: #fff;
+      text-align: center; padding: 20px;
+    }
+    header h1 { font-size: 24px; letter-spacing: 2px; }
+    header p { font-size: 13px; color: #ccc; margin-top: 5px; }
+
+    .name-block {
+      max-width: 500px; margin: 20px auto; padding: 0 16px;
+    }
+    .name-block input {
+      width: 100%; padding: 12px; border: 2px solid #c8a96e;
+      border-radius: 8px; font-size: 16px; outline: none;
+    }
+    .name-block label { display: block; margin-bottom: 6px; font-weight: bold; }
+
+    .categories {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      max-width: 900px; margin: 20px auto; padding: 0 16px;
+    }
+    .cat-btn {
+      padding: 8px 16px; border: none; background: #2c2c2c;
+      color: #fff; border-radius: 20px; cursor: pointer; font-size: 13px;
+    }
+    .cat-btn:hover, .cat-btn.active { background: #c8a96e; }
+
+    .menu-section { display: none; max-width: 900px; margin: 0 auto; padding: 0 16px 20px; }
+    .menu-section.visible { display: block; }
+    .menu-section h2 {
+      font-size: 18px; margin-bottom: 16px; padding-bottom: 6px;
+      border-bottom: 2px solid #c8a96e; color: #2c2c2c;
+    }
+
+    .dishes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+
+    .dish {
+      background: #fff; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s;
+    }
+    .dish:hover { transform: translateY(-2px); }
+    .dish img {
+      width: 100%; height: 150px; object-fit: cover;
+      background: #eee;
+    }
+    .dish-info { padding: 12px; }
+    .dish-name { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+    .dish-desc { font-size: 11px; color: #888; margin-bottom: 8px; line-height: 1.4; }
+    .dish-price { font-size: 15px; font-weight: bold; color: #c8a96e; margin-bottom: 10px; }
+
+    .qty-control { display: flex; align-items: center; gap: 10px; }
+    .qty-btn {
+      width: 30px; height: 30px; border: none; border-radius: 50%;
+      background: #2c2c2c; color: #fff; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .qty-btn:hover { background: #c8a96e; }
+    .qty-num { font-size: 16px; font-weight: bold; min-width: 20px; text-align: center; }
+
+    .order-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #2c2c2c; color: #fff;
+      padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+      z-index: 100;
+    }
+    .order-bar span { font-size: 14px; }
+    .order-bar button {
+      background: #c8a96e; color: #fff; border: none;
+      padding: 10px 24px; border-radius: 20px; font-size: 14px;
+      cursor: pointer; font-weight: bold;
+    }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6); z-index: 200;
+      justify-content: center; align-items: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 16px; padding: 24px;
+      max-width: 480px; width: 90%; max-height: 80vh; overflow-y: auto;
+    }
+    .modal h2 { margin-bottom: 16px; font-size: 20px; }
+    .modal-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+    .modal-total { font-size: 16px; font-weight: bold; margin-top: 12px; color: #c8a96e; }
+    .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+    .modal-btns button {
+      flex: 1; padding: 12px; border: none; border-radius: 8px;
+      font-size: 14px; cursor: pointer; font-weight: bold;
+    }
+    .btn-cancel { background: #eee; color: #333; }
+    .btn-send { background: #c8a96e; color: #fff; }
+
+    .success {
+      display: none; text-align: center; padding: 40px 20px;
+      max-width: 400px; margin: 40px auto;
+    }
+    .success.show { display: block; }
+    .success h2 { font-size: 22px; margin-bottom: 10px; }
+    .success p { color: #666; }
+    .success .emoji { font-size: 60px; margin-bottom: 16px; }
+
+    footer { height: 80px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏠 Грузинский Дом Лукум</h1>
+  <p>Выбери блюда — мы подготовим твой заказ заранее</p>
+</header>
+
+<div class="name-block">
+  <label for="guestName">👤 Твоё имя:</label>
+  <input type="text" id="guestName" placeholder="Введи своё имя..." />
+</div>
+
+<div class="categories" id="categories"></div>
+<div id="menu-container"></div>
+
+<div class="order-bar" id="orderBar" style="display:none">
+  <span id="orderCount">Выбрано: 0 блюд</span>
+  <button onclick="openModal()">Мой заказ 🧾</button>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>🧾 Твой заказ</h2>
+    <div id="modalItems"></div>
+    <div class="modal-total" id="modalTotal"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Назад</button>
+      <button class="btn-send" onclick="sendOrder()">Отправить ✉️</button>
+    </div>
+  </div>
+</div>
+
+<div class="success" id="successBlock">
+  <div class="emoji">🎉</div>
+  <h2>Заказ отправлен!</h2>
+  <p>Организатор получил твой выбор. Увидимся в Лукуме!</p>
+</div>
+
+<footer></footer>
+
+<script>
+const BOT_TOKEN = "8483106620:AAEMNUaa4EQwoQLESDx83IpUL5T0B_Lq8vs"; // замени
+const ADMIN_CHAT_ID = "458127668"; // замени
+
+const menuData = [
+  {
+    category: "🥗 Холодные закуски",
+    items: [
+      { id: "vinset", name: "Винный сет", price: 860, desc: "пармезан, бри, вяленые томаты, оливки, копченая утка, виноград /260гр", photo: "https://optim.tildacdn.com/tild3231-6666-4263-a434-616265343461/-/resize/480x480/-/format/webp/noroot.png.webp" },
+      { id: "ruletiki", name: "Рулетики из печеного перца", price: 480, desc: "с начинкой из сыра фета, грецкого ореха и кинзы /4 шт", photo: "https://optim.tildacdn.com/tild6666-3564-4363-b731-306463633362/-/resize/480x480/-/format/webp/photo.jpg.webp" },
+      { id: "ajapsandal", name: "Аджапсандал", price: 460, desc: "баклажаны, помидоры, сладкий перец /200гр", photo: "https://optim.tildacdn.com/tild3039-3662-4839-b636-626166656536/-/resize/480x480/-/format/webp/39f6225f-9604-4238-9.jpg.webp" },
+      { id: "badrijani", name: "Бадриджани", price: 480, desc: "рулетики из баклажан с творожным сыром и орехами /4 шт", photo: "https://optim.tildacdn.com/tild6330-6138-4164-b731-323631333465/-/resize/480x480/-/format/webp/photo.jpg.webp" },
+      { id: "losos", name: "Слабосоленый лосось", price: 960, desc: "с творожным сыром и хлебными чипсами /180гр", photo: "https://optim.tildacdn.com/tild3235-3239-4238-b330-353561623631/-/resize/480x480/-/format/webp/L8AHODhqsXw.jpg.webp" },
+      { id: "zelen", name: "Тарелка зелени", price: 140, desc: "", photo: "https://optim.tildacdn.com/tild3638-6666-4438-b361-613736643837/-/resize/480x480/-/format/webp/fbef0767-a32c-4662-8.jpg.webp" },
+    ]
+  },
+  {
+    category: "🍽 Для застолья",
+    items: [
+      { id: "myasoass", name: "Ассорти мясных деликатесов", price: 860, desc: "ростбиф, копченая утка, язык говяжий, карпаччо из курицы /260гр", photo: "https://optim.tildacdn.com/tild3463-3739-4962-b233-633633383333/-/resize/480x480/-/format/webp/111.jpg.webp" },
+      { id: "darymorya", name: "Дары моря", price: 1080, desc: "лосось с/с, кальмар, лосось холодного копчения /160гр", photo: "https://optim.tildacdn.com/tild3864-3231-4166-b664-386339396562/-/resize/480x480/-/format/webp/DSC_5292-min.jpg.webp" },
+      { id: "seld", name: "Селедочка домашнего засола", price: 520, desc: "с молодым картофелем /250гр", photo: "https://optim.tildacdn.com/tild3637-3666-4131-a337-303965666436/-/resize/480x480/-/format/webp/8WK7hTEsmsY.jpg.webp" },
+      { id: "solen", name: "Соленья по-грузински", price: 420, desc: "/300гр", photo: "https://optim.tildacdn.com/tild3665-6130-4230-a262-333662353836/-/resize/480x480/-/format/webp/DSC_8468-min.jpg.webp" },
+      { id: "syry", name: "Кавказские сыры", price: 590, desc: "два вида сулугуни, брынза, адыгейский /240гр", photo: "https://optim.tildacdn.com/tild3364-6135-4338-a435-393862643439/-/resize/480x480/-/format/webp/noroot.png.webp" },
+      { id: "ovoshi", name: "Овощная тарелка", price: 480, desc: "овощи, зелень /400гр", photo: "https://optim.tildacdn.com/tild3935-3765-4537-a233-323239363134/-/resize/480x480/-/format/webp/IMG_4006.jpg.webp" },
+      { id: "frukty", name: "Фруктовая тарелка", price: 830, desc: "1 кг", photo: "https://optim.tildacdn.com/tild3233-3532-4164-b163-323761393361/-/resize/480x480/-/format/webp/__2026-01-27__230510.png.webp" },
+    ]
+  },
+  {
+    category: "🥙 Салаты",
+    items: [
+      { id: "salgruz", name: "Салат Грузинский", price: 420, desc: "огурцы, помидоры, лук, зелень, ореховая заправка /240гр", photo: "https://optim.tildacdn.com/tild3332-3531-4661-b963-386636386466/-/resize/360x360/-/format/webp/noroot.png.webp" },
+      { id: "hrustbadj", name: "Хрустящий баклажан (острый)", price: 480, desc: "баклажаны, томаты, лук, кинза /180гр", photo: "https://optim.tildacdn.com/tild6565-3236-4166-a632-343038633435/-/resize/360x360/-/format/webp/e6a53d2a52d2e3982d25.jpeg.webp" },
+      { id: "salutka", name: "Салат с копченой уткой", price: 640, desc: "утиная грудка, микс салата, апельсин, кедровые орешки /170гр", photo: "https://optim.tildacdn.com/tild3764-3239-4361-a332-326236303863/-/resize/360x360/-/format/webp/IMG_4033.jpg.webp" },
+      { id: "salmorepr", name: "Салат с морепродуктами", price: 780, desc: "лосось, тигровые креветки, кальмар, печеный перец /200гр", photo: "https://optim.tildacdn.com/tild3032-3338-4531-b538-323235353163/-/resize/360x360/-/format/webp/__2025-04-29__153917.png.webp" },
+      { id: "salrostbif", name: "Салат с ростбифом и печеным перцем", price: 620, desc: "ростбиф, печеный перец, вяленые томаты, винный соус /100гр", photo: "https://optim.tildacdn.com/tild3533-3263-4465-b536-353762326630/-/resize/360x360/-/format/webp/IMG_4054.jpg.webp" },
+      { id: "salcamam", name: "Салат с сыром камамбер", price: 520, desc: "виноград, камамбер в панировке, медово-горчичная заправка /230гр", photo: "https://optim.tildacdn.com/tild3961-3462-4338-b238-363238666334/-/resize/360x360/-/format/webp/IMG_4114.jpg.webp" },
+      { id: "cezaridze", name: "Цезеридзе с цыпленком", price: 560, desc: "курочка с мангала, листья салата, помидоры, сыр /220гр", photo: "https://optim.tildacdn.com/tild3065-6634-4139-a162-616266396531/-/resize/360x360/-/format/webp/noroot.png.webp" },
+      { id: "gorny", name: "Горный", price: 560, desc: "микс салата, язык, шампиньоны, томаты черри /200гр", photo: "https://optim.tildacdn.com/tild6533-6135-4036-a136-323563653337/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+    ]
+  },
+  {
+    category: "🔥 Горячие закуски",
+    items: [
+      { id: "cheburek", name: "Мини чебуреки", price: 480, desc: "с домашней аджикой /260гр", photo: "https://optim.tildacdn.com/tild3839-3665-4365-b830-666337666438/-/resize/360x360/-/format/webp/DSC_8536-min.jpg.webp" },
+      { id: "gribykur", name: "Грибы запеченные с курочкой", price: 540, desc: "под сыром сулугуни /200гр", photo: "https://optim.tildacdn.com/tild3339-3366-4936-b336-626235323564/-/resize/360x360/-/format/webp/DSC_8593-min.jpg.webp" },
+      { id: "grenki", name: "Гренки чесночные", price: 280, desc: "обжаренные во фритюре, с соусом тар-тар /200гр", photo: "https://optim.tildacdn.com/tild6533-6263-4430-b936-393631376665/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "sulguni", name: "Жаренный сыр сулугуни", price: 420, desc: "с ягодным соусом /150гр", photo: "https://optim.tildacdn.com/tild3633-6566-4363-b062-383733363234/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "rebyshki", name: "Бараньи ребрышки барбекю", price: 580, desc: "/200гр", photo: "https://optim.tildacdn.com/tild6266-3566-4562-b139-613831653538/-/resize/360x360/-/format/webp/noroot.png.webp" },
+    ]
+  },
+  {
+    category: "🍲 Супы",
+    items: [
+      { id: "harcho", name: "Харчо с телятиной", desc: "с рисом и кавказскими специями /300гр", photo: "https://optim.tildacdn.com/tild3564-6539-4938-b631-383463663637/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "hash", name: "Хаш из баранины", desc: "с перцем, луком, сыром и зеленью /340гр", photo: "https://optim.tildacdn.com/tild6536-6665-4234-a361-666364303463/-/resize/360x360/-/format/webp/ae67a394-d18b-44f4-a.jpg.webp" },
+      { id: "lapsha", name: "Лапша домашняя", desc: "на курином бульоне, с курочкой и яйцом /250гр", photo: "https://optim.tildacdn.com/tild6239-3135-4365-b065-396337376335/-/resize/360x360/-/format/webp/__.jpg.webp" },
+    ]
+  },
+  {
+    category: "🍖 Горячее",
+    items: [
+      { id: "odjakhuri", name: "Оджахури", price: 620, desc: "жаркое из свинины с овощами и пряной зеленью /300гр", photo: "https://optim.tildacdn.com/tild3236-6138-4462-b631-386336336639/-/resize/360x360/-/format/webp/MFCco-rCRzQ.jpg.webp" },
+      { id: "chashushuli", name: "Чашушули", price: 680, desc: "телятина в томатном соусе с перцем, луком, кинзой /300гр", photo: "https://optim.tildacdn.com/tild3862-3463-4237-b233-653637333139/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "chakhokhbili", name: "Чахохбили", price: 620, desc: "курочка в соусе из томатов с луком, кинзой, специями /300гр", photo: "https://optim.tildacdn.com/tild6366-6263-4935-b939-636265613537/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "dolma", name: "Долма", price: 580, desc: "рулетики из виноградных листьев с мясом, соус мацони /230гр", photo: "https://optim.tildacdn.com/tild3830-3735-4936-a438-353862306466/-/resize/360x360/-/format/webp/__2026-01-27__224358.png.webp" },
+      { id: "chkmeruli", name: "Цыпленок чкмерули", price: 680, desc: "жареная курица в сливочно-чесночном соусе /400гр", photo: "https://optim.tildacdn.com/tild3334-6137-4338-b462-383963356630/-/resize/360x360/-/format/webp/IMG_4325.jpg.webp" },
+      { id: "krevetkichk", name: "Креветки в соусе чкмерули", price: 960, desc: "/280гр", photo: "https://optim.tildacdn.com/tild6232-3534-4161-a436-323835373738/-/resize/360x360/-/format/webp/___.jpg.webp" },
+      { id: "pechenka", name: "Говяжья печень и сердце томленые", price: 640, desc: "с пюре из сельдерея /300гр", photo: "https://optim.tildacdn.com/tild3538-3235-4237-b933-323434316633/-/resize/360x360/-/format/webp/IMG_4228.jpg.webp" },
+    ]
+  },
+  {
+    category: "🫓 Кутабы",
+    items: [
+      { id: "kutab_meat", name: "С телятиной и свининой", price: 300, desc: "/150гр", photo: "https://optim.tildacdn.com/tild3764-6339-4261-b631-333631666130/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "kutab_potato", name: "С картофелем и грибами", price: 250, desc: "/150гр", photo: "https://optim.tildacdn.com/tild6361-3433-4639-b733-333138653263/-/resize/360x360/-/format/webp/21.jpg.webp" },
+      { id: "kutab_cheese", name: "С сыром и зеленью", price: 280, desc: "/150гр", photo: "https://optim.tildacdn.com/tild3238-3761-4537-a238-623631366461/-/resize/360x360/-/format/webp/3.jpg.webp" },
+      { id: "kutab_lamb", name: "С бараниной", price: 320, desc: "/150гр", photo: "https://optim.tildacdn.com/tild6361-3433-4639-b733-333138653263/-/resize/360x360/-/format/webp/21.jpg.webp" },
+    ]
+  },
+  {
+    category: "🔥 Мясо на углях",
+    items: [
+      { id: "shash_beef", name: "Шашлык из говядины", price: 620, desc: "на тонком лаваше с соусом сацебели /100гр", photo: "https://optim.tildacdn.com/tild6138-6562-4164-b764-306135303961/-/resize/360x360/-/format/webp/__2025-04-29__155524.png.webp" },
+      { id: "shash_lamb", name: "Шашлык из баранины (мякоть)", price: 540, desc: "/100гр", photo: "https://optim.tildacdn.com/tild3366-6233-4562-b063-346436356633/-/resize/360x360/-/format/webp/__.jpg.webp" },
+      { id: "shash_kare", name: "Шашлык из баранины (каре)", price: 580, desc: "на лаваше с соусом сацебели /100гр", photo: "https://optim.tildacdn.com/tild6664-3063-4639-b534-373230346565/-/resize/360x360/-/format/webp/o-f9o3gS9MA.jpg.webp" },
+      { id: "shash_pork", name: "Шашлык из свинины", price: 320, desc: "на лаваше с соусом сацебели /100гр", photo: "https://optim.tildacdn.com/tild3366-6233-4562-b063-346436356633/-/resize/360x360/-/format/webp/__.jpg.webp" },
+      { id: "steak_semga", name: "Стейк из семги", price: 640, desc: "/100гр", photo: "https://optim.tildacdn.com/tild6239-3166-4036-a435-373561326430/-/resize/360x360/-/format/webp/__2026-01-27__230718.png.webp" },
+      { id: "set_company", name: "Сет на компанию", price: 3600, desc: "баранина, курица, люля, шампиньоны гриль, картофель гриль /800гр", photo: "https://optim.tildacdn.com/tild3164-6462-4535-b633-656665343366/-/resize/360x360/-/format/webp/__2026-01-27__230958.png.webp" },
+    ]
+  },
+  {
+    category: "🥩 Кебаби",
+    items: [
+      { id: "lulya_lamb", name: "Люля-кебаб из баранины", price: 680, desc: "на лаваше с соусом сацебели /200гр", photo: "https://optim.tildacdn.com/tild3164-3935-4462-a161-373161663262/-/resize/360x360/-/format/webp/_.jpg.webp" },
+      { id: "lulya_beef", name: "Люля-кебаб говядина-свинина", price: 580, desc: "на лаваше с соусом сацебели /200гр", photo: "https://optim.tildacdn.com/tild3863-3237-4530-a631-646361306336/-/resize/360x360/-/format/webp/_.jpg.webp" },
+      { id: "lulya_chick", name: "Люля-кебаб из курицы", price: 520, desc: "на лаваше с соусом сацебели /200гр", photo: "https://optim.tildacdn.com/tild3965-3139-4466-b531-346661393263/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+    ]
+  },
+  {
+    category: "🥔 К мясу",
+    items: [
+      { id: "lulya_potato", name: "Люля из картофеля с сыром", price: 220, desc: "/130гр", photo: "https://optim.tildacdn.com/tild6333-3737-4837-b933-666431396231/-/resize/360x360/-/format/webp/GIX73xjf_m8.jpg.webp" },
+      { id: "kartgril", name: "Картофель гриль", price: 120, desc: "/100гр", photo: "https://optim.tildacdn.com/tild6465-6665-4534-b631-656434636634/-/resize/360x360/-/format/webp/24fa6c00cef71696bffa.jpg.webp" },
+      { id: "ovoshgril", name: "Шашлык из овощей", price: 220, desc: "баклажан, цукини, болгарский перец /100гр", photo: "https://optim.tildacdn.com/tild6438-3533-4633-b637-343830623739/-/resize/360x360/-/format/webp/noroot.png.webp" },
+      { id: "gribygril", name: "Шампиньоны гриль", price: 180, desc: "/180гр", photo: "https://optim.tildacdn.com/tild3461-3235-4134-b335-386266626537/-/resize/360x360/-/format/webp/photo_52313107887849.jpg.webp" },
+      { id: "kartdolki", name: "Картофельные дольки", price: 200, desc: "/100гр", photo: "https://optim.tildacdn.com/tild3465-3239-4266-b361-656665653834/-/resize/360x360/-/format/webp/daca51c39fb9bcd64347.jpg.webp" },
+      { id: "luk", name: "Маринованный лук", price: 60, desc: "/100гр", photo: "https://optim.tildacdn.com/tild6132-3163-4333-a538-316462633664/-/resize/360x360/-/format/webp/noroot.png.webp" },
+    ]
+  },
+  {
+    category: "🥟 Хинкали",
+    items: [
+      { id: "patara_peper", name: "Патара хинкали (в перечном соусе)", price: 520, desc: "/5 шт", photo: "https://optim.tildacdn.com/tild3232-3730-4962-b538-323031306164/-/resize/360x360/-/format/webp/IMG_4270.jpg.webp" },
+      { id: "patara_tomat", name: "Патара хинкали (в томатном соусе, острый)", price: 520, desc: "/5 шт", photo: "https://optim.tildacdn.com/tild6161-6331-4439-b733-373363313961/-/resize/360x360/-/format/webp/IMG_4289.jpg.webp" },
+      { id: "hink_meat", name: "С телятиной, свининой и зеленью", price: 110, desc: "/1 шт", photo: "https://optim.tildacdn.com/tild3564-6634-4433-b337-383864393931/-/resize/360x360/-/format/webp/3.jpg.webp" },
+      { id: "hink_mtiluri", name: "Мтилури (без зелени)", price: 110, desc: "телятина и свинина /1 шт", photo: "https://optim.tildacdn.com/tild6639-6234-4131-a332-306232316463/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "hink_chick", name: "С курицей и копченым сулугуни", price: 110, desc: "/1 шт", photo: "https://optim.tildacdn.com/tild6434-3638-4433-a265-326336363861/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "hink_lamb", name: "С бараниной и зеленью", price: 120, desc: "/1 шт", photo: "https://optim.tildacdn.com/tild6130-3364-4031-b339-346130323166/-/resize/360x360/-/format/webp/4.jpg.webp" },
+      { id: "hink_mush", name: "С грибами и сулугуни", price: 90, desc: "/1 шт", photo: "https://optim.tildacdn.com/tild6466-3832-4736-b165-633636393166/-/resize/360x360/-/format/webp/55.jpg.webp" },
+      { id: "hink_shrimp", name: "С креветками и страчателлой", price: 190, desc: "/1 шт", photo: "https://optim.tildacdn.com/tild6434-3638-4433-a265-326336363861/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "kvari", name: "Квари", price: 320, desc: "грузинские вареники с двумя видами сыра /3 шт", photo: "https://optim.tildacdn.com/tild6531-3936-4538-a634-343666313331/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+    ]
+  },
+  {
+    category: "🫓 Блюда из печи",
+    items: [
+      { id: "hach_adjar_s", name: "Хачапури по-аджарски (для тебя)", price: 340, desc: "ลодочка /180гр", photo: "https://optim.tildacdn.com/tild6539-3366-4565-b434-623063376637/-/resize/360x360/-/format/webp/noroot.png.webp" },
+      { id: "hach_adjar_l", name: "Хачапури по-аджарски (для двоих)", price: 520, desc: "ลодочка /340гр", photo: "https://optim.tildacdn.com/tild6665-6634-4161-a630-363664373766/-/resize/360x360/-/format/webp/i4UnK3XxSEqaYCsCHjex.jpg.webp" },
+      { id: "hach_imer", name: "Хачапури по-имеретински", price: 560, desc: "/400гр", photo: "https://optim.tildacdn.com/tild3662-3337-4438-b663-326330626565/-/resize/360x360/-/format/webp/18fadae8-0a5e-4a3e-a.jpg.webp" },
+      { id: "hach_megr", name: "Хачапури по-мегрельски", price: 640, desc: "/450гр", photo: "https://optim.tildacdn.com/tild6262-3237-4165-a638-623634373636/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "hach_mangal", name: "Хачапури на мангале", price: 380, desc: "/200гр", photo: "https://optim.tildacdn.com/tild6637-3265-4437-a537-626638336438/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "hach_adjar_ajap", name: "Хачапури с аджапсандалом (острый)", price: 580, desc: "ลодочка /580гр", photo: "https://optim.tildacdn.com/tild6334-6366-4435-a665-623731623135/-/resize/360x360/-/format/webp/noroot.png.webp" },
+      { id: "kubdari", name: "Кубдари с бараниной", price: 720, desc: "/400гр", photo: "https://optim.tildacdn.com/tild3230-3837-4862-b065-613761363833/-/resize/360x360/-/format/webp/7c6f9d20-8c92-4d8d-b.jpg.webp" },
+    ]
+  },
+  {
+    category: "🍰 Десерты",
+    items: [
+      { id: "cheesecake", name: "Чизкейк", price: 320, desc: "/1 порция", photo: "https://optim.tildacdn.com/tild6563-3730-4538-b437-306464383133/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "shokkol", name: "Шоколадная колбаса", price: 200, desc: "какао, грецкий орех, печенье /1 порция", photo: "https://optim.tildacdn.com/tild3930-3066-4663-b739-636135383638/-/resize/360x360/-/format/webp/IMG_4165.jpg.webp" },
+      { id: "tort", name: "Торт «Медовый Тбилиси»", price: 280, desc: "/1 порция", photo: "https://optim.tildacdn.com/tild3264-3661-4963-a163-326438383030/-/resize/360x360/-/format/webp/MAYETdFh7Rw.jpg.webp" },
+      { id: "pakhlava", name: "Пахлава", price: 180, desc: "/1 шт", photo: "https://optim.tildacdn.com/tild6137-3139-4634-b137-333532616634/-/resize/360x360/-/format/webp/eUavtEusjYI.jpg.webp" },
+      { id: "morozhenoe", name: "Мороженое с шоколадным соусом", price: 320, desc: "пломбир, шоколадное, клубничное /3 шарика", photo: "https://optim.tildacdn.com/tild6363-6132-4339-b134-663232356261/-/resize/360x360/-/format/webp/88a293c2295c341d8b2a.jpg.webp" },
+    ]
+  },
+  {
+    category: "🫙 Соусы",
+    items: [
+      { id: "tkemali", name: "Ткемали (из слив)", price: 80, desc: "/50мл", photo: "https://optim.tildacdn.com/tild3336-3038-4132-a366-346537656564/-/resize/360x360/-/format/webp/recept-60047-1240x82.jpg.webp" },
+      { id: "narsharab", name: "Наршараб (из граната)", price: 80, desc: "/50мл", photo: "https://optim.tildacdn.com/tild3037-6662-4962-b231-363263636234/-/resize/360x360/-/format/webp/photo.jpg.webp" },
+      { id: "satsebeli", name: "Сацибели (из томатов)", price: 80, desc: "/50мл", photo: "https://optim.tildacdn.com/tild6135-3362-4938-b234-663037326434/-/resize/360x360/-/format/webp/recept-72619-1240x82.jpg.webp" },
+      { id: "adjika", name: "Аджика домашняя", price: 80, desc: "/50мл", photo: "https://optim.tildacdn.com/tild3066-3633-4465-b466-366263613437/-/resize/360x360/-/format/webp/2023-07-05_102455png.png.webp" },
+      { id: "matsoni", name: "Мацони", price: 80, desc: "/50мл", photo: "https://optim.tildacdn.com/tild6633-3637-4434-b563-396264626565/-/resize/360x360/-/format/webp/30258560061199336_e9.jpg.webp" },
+      { id: "tartar", name: "Тар-тар (классика)", price: 80, desc: "/50мл", photo: "https://optim.tildacdn.com/tild3566-3062-4039-a166-396233306264/-/resize/360x360/-/format/webp/sous-tartar_15912515.jpg.webp" },
+      { id: "smetana", name: "Сметанный (с зеленью)", price: 80, desc: "/50мл", photo: "https://optim.tildacdn.com/tild6533-6165-4062-b632-613065386264/-/resize/360x360/-/format/webp/1694465762_food-pibi.jpg.webp" },
+    ]
+  },
+];
+
+// --- State ---
+const cart = {};
+
+// --- Render ---
+function render() {
+  const catContainer = document.getElementById("categories");
+  const menuContainer = document.getElementById("menu-container");
+  catContainer.innerHTML = "";
+  menuContainer.innerHTML = "";
+
+  menuData.forEach((section, i) => {
+    // Кнопка категории
+    const btn = document.createElement("button");
+    btn.className = "cat-btn" + (i === 0 ? " active" : "");
+    btn.textContent = section.category;
+    btn.onclick = () => {
+      document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".menu-section").forEach(s => s.classList.remove("visible"));
+      document.getElementById("sec-" + i).classList.add("visible");
+    };
+    catContainer.appendChild(btn);
+
+    // Секция
+    const sec = document.createElement("div");
+    sec.className = "menu-section" + (i === 0 ? " visible" : "");
+    sec.id = "sec-" + i;
+
+    const h2 = document.createElement("h2");
+    h2.textContent = section.category;
+    sec.appendChild(h2);
+
+    const grid = document.createElement("div");
+    grid.className = "dishes";
+
+    section.items.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "dish";
+      card.innerHTML = `
+        <img src="${item.photo || 'https://placehold.co/300x150/f5f0eb/c8a96e?text=🍽'}" alt="${item.name}" onerror="this.src='https://placehold.co/300x150/f5f0eb/c8a96e?text=🍽'"/>
+        <div class="dish-info">
+          <div class="dish-name">${item.name}</div>
+          <div class="dish-desc">${item.desc}</div>
+          <div class="qty-control">
+            <button class="qty-btn" onclick="changeQty('${item.id}', -1, ${item.price}, '${item.name}')">−</button>
+            <span class="qty-num" id="qty-${item.id}">${cart[item.id]?.qty || 0}</span>
+            <button class="qty-btn" onclick="changeQty('${item.id}', 1, ${item.price}, '${item.name}')">+</button>
+          </div>
+        </div>`;
+      grid.appendChild(card);
+    });
+
+    sec.appendChild(grid);
+    menuContainer.appendChild(sec);
+  });
+}
+
+function changeQty(id, delta, price, name) {
+  if (!cart[id]) cart[id] = { qty: 0, price, name };
+  cart[id].qty = Math.max(0, cart[id].qty + delta);
+  if (cart[id].qty === 0) delete cart[id];
+  document.getElementById("qty-" + id).textContent = cart[id]?.qty || 0;
+  updateBar();
+}
+
+function updateBar() {
+  const total = Object.values(cart).reduce((s, i) => s + i.qty, 0);
+  const bar = document.getElementById("orderBar");
+  bar.style.display = total > 0 ? "flex" : "none";
+  document.getElementById("orderCount").textContent = `Выбрано: ${total} блюд`;
+}
+
+function openModal() {
+  const items = Object.values(cart);
+  if (items.length === 0) return;
+  let html = "";
+  items.forEach(i => {
+    html += `<div class="modal-item"><span>${i.name} × ${i.qty}</span></div>`;
+  });
+  document.getElementById("modalItems").innerHTML = html;
+  document.getElementById("modalTotal").textContent = ""; // убрали "Итого"
+  document.getElementById("modalOverlay").classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("modalOverlay").classList.remove("open");
+}
+
+async function sendOrder() {
+  const name = document.getElementById("guestName").value.trim();
+  if (!name) { alert("Введи своё имя!"); closeModal(); return; }
+
+  const items = Object.values(cart);
+  if (items.length === 0) return;
+
+  let text = `🍽 *Заказ от ${name}*\n\n`;
+  let total = 0;
+  items.forEach(i => {
+    text += `• ${i.name} × ${i.qty} — ${i.price * i.qty} руб.\n`;
+    total += i.price * i.qty;
+  });
+  text += `\n💵 *Итого: ${total} руб.*`;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: ADMIN_CHAT_ID, text, parse_mode: "Markdown" })
+    });
+    closeModal();
+    document.getElementById("menu-container").style.display = "none";
+    document.getElementById("categories").style.display = "none";
+    document.getElementById("orderBar").style.display = "none";
+    document.getElementById("successBlock").classList.add("show");
+  } catch(e) {
+    alert("Ошибка отправки. Попробуй ещё раз.");
+  }
+}
+
+render();
+</script>
+</body>
+</html>
